@@ -51,12 +51,23 @@ public class Main {
     public static void main(String[] args) {
         
         
-        System.out.println("Test");
+        System.out.print("\u001B[36m");
         
-        DungeonMap dM = new DungeonMap("testGraph1.txt", "testKey1");
+        DungeonMap dM = new DungeonMap("testGraph1.txt", "testKey1.txt");
         
-        dM.printMatrix();
+        dM.printAdjacencyMatrix();
         
-        logger.info(Boolean.toString(dM.pathExists(12, 11)));
+        dM.printKeyLocations();
+        
+        dM.findPath();
+        
+        dM = new DungeonMap("shortGraph1.txt", "shortKey1.txt");
+        
+        dM.printAdjacencyMatrix();
+        
+        dM.printKeyLocations();
+        
+        
+        
     }
 }
