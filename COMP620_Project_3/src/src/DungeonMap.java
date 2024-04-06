@@ -24,6 +24,11 @@ public class DungeonMap {
     private void buildDungeon(String graphFile, String keyFile) {
         int n = 0;
         
+        /*
+         * Setting up graphs...
+         */
+        
+        logger.info("Setting up adjacencyMatrix");
         
         try (BufferedReader br = new BufferedReader(new FileReader(graphFile))) {
             String line;
@@ -37,6 +42,8 @@ public class DungeonMap {
              * Set up empty array
              * 
              */
+            
+            this.size = n;
             
             this.adjacencyMatrix = new int[n][n];
             this.keyLocations = new boolean[n][n];
@@ -70,7 +77,6 @@ public class DungeonMap {
             logger.severe("Error reading file: " + graphFile) ;
         }
         
-        
     }
     
     
@@ -103,19 +109,53 @@ public class DungeonMap {
     public void printMatrix() {
         StringBuilder matrixString = new StringBuilder("Adjacency Matrix:\n");
 
+        // Calculate the maximum number of digits in the matrix for formatting
+        int maxDigits = 0;
         for (int i = 0; i < size; i++) {
             for (int j = 0; j < size; j++) {
-                if (adjacencyMatrix[i][j] == Integer.MAX_VALUE) {
-                    matrixString.append("+ ");
-                } else {
-                    matrixString.append(adjacencyMatrix[i][j]).append(" ");
+                if (adjacencyMatrix[i][j] != Integer.MAX_VALUE && 
+                    Integer.toString(adjacencyMatrix[i][j]).length() > maxDigits) {
+                    maxDigits = Integer.toString(adjacencyMatrix[i][j]).length();
                 }
             }
-            matrixString.append("\n"); // Move to the next line after appending each row
+        }
+
+        int indexDigits = Integer.toString(size - 1).length();
+        maxDigits = Math.max(maxDigits, indexDigits);
+
+        // Header with column indices
+        String header = " ".repeat(indexDigits + 2); // Space for row index column
+        for (int i = 0; i < size; i++) {
+            header += String.format("| %-" + maxDigits + "d ", i);
+        }
+        matrixString.append(header).append("|\n");
+
+        String separator = "_".repeat(header.length()); // Adjust the separator to match the header width
+        matrixString.append(separator).append("\n");
+
+        for (int i = 0; i < size; i++) {
+            // Row index
+            String rowIndex = String.format("%-" + (indexDigits + 2) + "d", i); // Left-hand side indices
+            matrixString.append(rowIndex);
+
+            for (int j = 0; j < size; j++) {
+                matrixString.append("| ");
+                if (adjacencyMatrix[i][j] == Integer.MAX_VALUE) {
+                    matrixString.append("+".repeat(maxDigits));
+                } else {
+                    // Right-pad the number with spaces to align columns
+                    String numberStr = String.format("%-" + maxDigits + "d", adjacencyMatrix[i][j]);
+                    matrixString.append(numberStr);
+                }
+                matrixString.append(" ");
+            }
+            matrixString.append("|\n").append(separator).append("\n");
         }
 
         logger.info(matrixString.toString());
     }
+
+
 
 
     // Check if a path exists between src and dest

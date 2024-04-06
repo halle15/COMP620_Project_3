@@ -57,6 +57,6 @@ public class Main {
         
         dM.printMatrix();
         
-        
+        logger.info(Boolean.toString(dM.pathExists(12, 11)));
     }
 }
