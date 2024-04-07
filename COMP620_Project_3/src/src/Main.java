@@ -55,11 +55,13 @@ public class Main {
         
         DungeonMap dM = new DungeonMap("testGraph1.txt", "testKey1.txt");
         
+        
         dM.printAdjacencyMatrix();
         
         dM.printKeyLocations();
         
-        dM.findPath();
+        //dM.findPath();
+        
         
         dM = new DungeonMap("shortGraph1.txt", "shortKey1.txt");
         
@@ -67,7 +69,24 @@ public class Main {
         
         dM.printKeyLocations();
         
+        dM.grabKey(3);
         
+        dM.printAdjacencyMatrix();
+        
+        dM.printKeyLocations();
+        
+        /* testing double take
+        dM.grabKey(3);
+        */
+        
+        
+        /* testing removing key
+        logger.info(dM.isKey(3).toString());
+        
+        dM.removeRoomKey(3);
+        
+        logger.info(dM.isKey(3).toString());
+        */
         
     }
 }

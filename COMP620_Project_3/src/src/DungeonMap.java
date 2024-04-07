@@ -15,9 +15,10 @@ public class DungeonMap {
     int endVertex;
 
     public int[][] adjacencyMatrix;
-    
+
     /*
-     * For int[a][b], describes that there is a key in room a that will reduce the weight for all edges traveling into b by adjacencyMatrix[a][b].
+     * For int[a][b], describes that there is a key in room a that will reduce the
+     * weight for all edges traveling into b by adjacencyMatrix[a][b].
      */
     private int[][] keyLocations;
 
@@ -37,8 +38,6 @@ public class DungeonMap {
 
         try (BufferedReader br = new BufferedReader(new FileReader(graphFile))) {
             String line;
-            // Skip first three lines as they are already used in constructor call, adjust
-            // if needed
             n = Integer.parseInt(br.readLine()); // Number of vertices
             startVertex = Integer.parseInt(br.readLine()); // Entrance vertex
             endVertex = Integer.parseInt(br.readLine()); // Destination vertex
@@ -76,18 +75,17 @@ public class DungeonMap {
 
                 logger.info("Added edge from " + src + " to " + dest + " with weight " + weight);
             }
-            
+
         } catch (IOException e) {
             logger.severe("Error reading file: " + graphFile);
         }
-        
+
         logger.info("Finished creating adjacency matrix! Creating keys matrix...");
-        
+
         applyKeysFromFile(keyFile);
 
-
     }
-    
+
     private void applyKeysFromFile(String keyFile) {
         try (BufferedReader br = new BufferedReader(new FileReader(keyFile))) {
             String line;
@@ -95,28 +93,31 @@ public class DungeonMap {
                 String[] parts = line.split(",");
                 int roomWithKey = Integer.parseInt(parts[0].trim()); // Room containing the key
                 int weightReduction = Integer.parseInt(parts[1].trim()); // Weight reduction amount
-                
-                
-                /* in room a there is a key that reduces the weight by b for all edges going to vertex c, d, e...
-                * 
-                * 
-                * For keyLocations[a][c], describes that there is a key in room a that will reduce the weight b (keyLocations[a][c]) for all edges 
-                * 
-                * traveling into c by b or keyLocations[a][c].
-                */
-                
-                for(int i = 2; i < parts.length; i++) {
+
+                /*
+                 * in room a there is a key that reduces the weight by b for all edges going to
+                 * vertex c, d, e...
+                 * 
+                 * 
+                 * For keyLocations[a][c], describes that there is a key in room a that will
+                 * reduce the weight b (keyLocations[a][c]) for all edges
+                 * 
+                 * traveling into c by b or keyLocations[a][c].
+                 */
+
+                for (int i = 2; i < parts.length; i++) {
                     int affectedRoom = Integer.parseInt(parts[i].trim()); // Room affected by the key
-                    
+
                     keyLocations[roomWithKey][affectedRoom] = weightReduction;
-                    logger.info("Added key for room " + affectedRoom + " inside of room " + roomWithKey + " for a weight reduction of " + weightReduction);
+                    logger.info("Added key for room " + affectedRoom + " inside of room " + roomWithKey
+                            + " for a weight reduction of " + weightReduction);
                 }
-                
+
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
-        
+
         logger.info("Completed reading of keyfile and writing of keyLocations");
     }
 
@@ -135,15 +136,96 @@ public class DungeonMap {
         return adjacencyMatrix[src][dest];
     }
 
-    // Update the cost of all paths going to a specific room based on a key pickup
-    public void grabKey(int room, int costReduction) {
-        
-        
-        /*
-         * First, fi
-         * 
-         */
+    /**
+     * Removes all weight reductions from this room's key NO MATTER WHAT. Utilize
+     * this AFTER changing weights!
+     * 
+     * @param room The room to remove weight reductions from.
+     */
+    public void removeRoomKey(int room) {
+        for (int i = 0; i < size; i++) {
+            keyLocations[room][i] = 0;
+        }
+
+        logger.info("Removed key from room " + room + "!");
     }
+
+    /**
+     * 
+     * @param room The room to search in
+     * @return Returns list of rooms this room's key unlocks, or an empty list if
+     *         there is no key
+     */
+    public ArrayList<Integer> isKey(int room) {
+
+        logger.info("Checking for key in room " + room + "...");
+
+        ArrayList<Integer> returnArray = new ArrayList<Integer>();
+
+        for (int i = 0; i < size; i++) {
+            if (keyLocations[room][i] != 0) {
+                logger.info("Found key for room " + i);
+                returnArray.add(i);
+            }
+        }
+        if (returnArray.isEmpty()) {
+            logger.info("No key found!");
+        }
+        return returnArray;
+    }
+
+    public int getKeyWeightReduction(int room) {
+        for (int i = 0; i < size; i++) {
+            if (keyLocations[room][i] != 0) {
+                logger.info("Key value for key found in room " + room + " is a weight reduction of "
+                        + keyLocations[room][i]);
+
+                return keyLocations[room][i];
+            }
+        }
+
+        return -1;
+    }
+
+    // Update the cost of all paths going to a specific room based on a key pickup
+    public void grabKey(int room) {
+        logger.info("Trying to take key in room " + room);
+
+        ArrayList<Integer> keyRoomTo = isKey(room);
+
+        if (!keyRoomTo.isEmpty()) {
+            logger.info("Found key to rooms " + keyRoomTo.toString() + " which was in room " + room
+                    + ". \n Updating weights...");
+
+            for (Integer r : keyRoomTo) {
+                for (int i = 0; i < size; i++) {
+                    logger.info(
+                            "Updating weight from room " + i + " to room " + r + " by " + getKeyWeightReduction(room)
+                                    + ",\nNote that some may be at 0 already, so will see no difference.");
+
+                    if (adjacencyMatrix[i][r] < Integer.MAX_VALUE) {
+                        adjacencyMatrix[i][r] = Math.max(0, adjacencyMatrix[i][r] - getKeyWeightReduction(room));
+                    }
+                }
+                // Math.min(0, adjacencyMatrix[i][r] - getKeyWeightReduction(room)
+
+            }
+
+            logger.info("Updated weights, now removing key...");
+
+            removeRoomKey(room);
+
+        } else {
+            logger.warning("Tried to take key when one is not available! Possibly broken logic!");
+        }
+
+    }
+    
+    public boolean isPath(int from, int to) {
+        return (adjacencyMatrix[from][to] != Integer.MAX_VALUE);
+    }
+    
+
 
     public void printAdjacencyMatrix() {
         StringBuilder matrixString = new StringBuilder("Adjacency Matrix:\n");
@@ -193,7 +275,7 @@ public class DungeonMap {
 
         logger.info(matrixString.toString());
     }
-    
+
     public void printKeyLocations() {
         StringBuilder matrixString = new StringBuilder("Key Locations Matrix:\n");
 
@@ -241,28 +323,6 @@ public class DungeonMap {
         }
 
         logger.info(matrixString.toString()); // Change to logger.info if using a logging framework
-    }
-    
-    /**
-     * 
-     * @return Returns ArrayList<Integer> of path of rooms to go to get to end
-     */
-    public ArrayList<Integer> findPath(){
-        
-        ArrayList<Integer> foundPath = new ArrayList<Integer>();
-        
-        int currentPosition = startVertex;
-        
-        logger.info("Starting pathfinding at " + startVertex + " with target " + endVertex);
-        
-        while(currentPosition != endVertex) {
-            /*
-             * Main implementation here.
-             */
-        }
-        
-        
-        return foundPath;
     }
 
 
