@@ -60,8 +60,11 @@ public class Main {
         
         dM.printKeyLocations();
         
-        //dM.findPath();
+        Pathfinder f = new Pathfinder(dM);
         
+        logger.info(dM.findOptimalPathUsingBellmanFord().toString());
+        
+        /*
         
         dM = new DungeonMap("shortGraph1.txt", "shortKey1.txt");
         
@@ -74,6 +77,8 @@ public class Main {
         dM.printAdjacencyMatrix();
         
         dM.printKeyLocations();
+        
+        */
         
         /* testing double take
         dM.grabKey(3);

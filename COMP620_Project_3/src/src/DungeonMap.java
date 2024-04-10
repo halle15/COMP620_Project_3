@@ -24,6 +24,7 @@ public class DungeonMap {
 
     public DungeonMap(String graphFile, String keyFile) {
         logger.info("Building dungeon from graphFile: " + graphFile + " and keyFile: " + keyFile);
+        
         buildDungeon(graphFile, keyFile);
     }
 
@@ -330,4 +331,81 @@ public class DungeonMap {
     public boolean pathExists(int src, int dest) {
         return adjacencyMatrix[src][dest] != Integer.MAX_VALUE;
     }
+    
+    public ArrayList<Integer> solveDungeon(){
+        
+        // begin with finding the initial best path even given keys
+        
+        ArrayList<Integer> optimalPath = findOptimalPathUsingBellmanFord();
+        
+        // find all doors required in this, if we come across a door, we need to prioritize
+        
+        
+        
+        
+        return null;
+    }
+    
+    public ArrayList<Integer> findOptimalPathUsingBellmanFord() {
+        int[] distances = new int[size];
+        int[] predecessors = new int[size];
+        ArrayList<Integer> path = new ArrayList<>();
+
+        // Initialize distances and predecessors
+        for (int i = 0; i < size; i++) {
+            distances[i] = Integer.MAX_VALUE;
+            predecessors[i] = -1; // -1 signifies no predecessor
+        }
+        distances[startVertex] = 0; // Distance to itself is 0
+        logger.info("Initial distances and predecessors set. Start vertex: " + startVertex);
+
+        // Relax edges repeatedly
+        logger.info("Starting to relax edges...");
+        for (int i = 1; i < size; i++) {
+            for (int u = 0; u < size; u++) {
+                for (int v = 0; v < size; v++) {
+                    if (adjacencyMatrix[u][v] != Integer.MAX_VALUE && distances[u] != Integer.MAX_VALUE) {
+                        int newDistance = distances[u] + adjacencyMatrix[u][v];
+                        if (newDistance < distances[v]) {
+                            distances[v] = newDistance;
+                            predecessors[v] = u;
+                            logger.info("Edge relaxed: " + u + " -> " + v + " with new distance: " + newDistance);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Check for negative-weight cycles
+        logger.info("Checking for negative-weight cycles...");
+        for (int u = 0; u < size; u++) {
+            for (int v = 0; v < size; v++) {
+                if (adjacencyMatrix[u][v] != Integer.MAX_VALUE && distances[u] != Integer.MAX_VALUE && distances[u] + adjacencyMatrix[u][v] < distances[v]) {
+                    logger.severe("Graph contains a negative-weight cycle. Cannot find an optimal path.");
+                    return null; // Negative cycle detected, no solution
+                }
+            }
+        }
+
+        // Reconstruct path from startVertex to endVertex
+        logger.info("Reconstructing path...");
+        for (int at = endVertex; at != -1; at = predecessors[at]) {
+            path.add(0, at); // Insert at beginning to reverse the path
+            logger.info("Path so far: " + path);
+        }
+
+        // Check if a path exists
+        if (path.isEmpty() || path.get(0) != startVertex) {
+            logger.info("No path exists from " + startVertex + " to " + endVertex);
+            return null;
+        }
+
+        // Log the final path
+        logger.info("Optimal path found from " + startVertex + " to " + endVertex + ": " + path);
+
+        // Return the path
+        return path;
+    }
+
+
 }
