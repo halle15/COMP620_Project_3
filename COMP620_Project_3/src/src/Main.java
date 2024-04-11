@@ -72,9 +72,10 @@ public class Main {
         
         dM.printFloydWarshallMap();
         
-        rootLogger.info(dM.memoizedOptimalPath(1, 12).toString());
+        dM.solveDungeon(dM.startVertex, dM.endVertex);
         
         
+        /*
         dM = new DungeonMap("shortGraph1.txt", "shortKey1.txt");
         
         dM.printAdjacencyMatrix();
@@ -89,15 +90,9 @@ public class Main {
         
         rootLogger.info(dM.findLockedRoomsInPath(dM.findOptimalPathUsingFloydWarshall()).toString());
                 
+        dM.solveDungeon(dM.startVertex, dM.endVertex);
         
-        dM.grabKey(3);
-        
-        dM.printAdjacencyMatrix();
-        
-        dM.printKeyLocations();
-        
-        
-        
+        */
         /* testing double take
         dM.grabKey(3);
         */

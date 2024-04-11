@@ -4,7 +4,9 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.Set;
+import java.util.Stack;
 import java.util.logging.*;
 
 public class DungeonMap {
@@ -32,20 +34,24 @@ public class DungeonMap {
      */
     private int[][] keyLocations;
 
+    /*
+     * Global path variable
+     */
+
+    ArrayList<Integer> currentPath;
+    Stack<Integer> nextTarget = new Stack<Integer>();
+    int currentRoom;
+
     public DungeonMap(String graphFile, String keyFile) {
-        
-        
+
         Logger rootLogger = Logger.getLogger("");
         Handler[] handlers = rootLogger.getHandlers();
         if (handlers[0] instanceof ConsoleHandler) {
             handlers[0].setLevel(Level.ALL);
         }
 
-        
         logger.info("Building dungeon from graphFile: " + graphFile + " and keyFile: " + keyFile);
 
-        
-        
         buildDungeon(graphFile, keyFile);
     }
 
@@ -55,7 +61,6 @@ public class DungeonMap {
         if (handlers[0] instanceof ConsoleHandler) {
             handlers[0].setLevel(l);
         }
-
 
         logger.info("Building dungeon from graphFile: " + graphFile + " and keyFile: " + keyFile);
 
@@ -358,8 +363,8 @@ public class DungeonMap {
         logger.info(matrixString.toString());
     }
 
-    // Check if a path exists between src and dest
-    public boolean pathExists(int src, int dest) {
+    // Check if a direct edge exists between src and dest
+    public boolean directEdgeExists(int src, int dest) {
         return adjacencyMatrix[src][dest] != Integer.MAX_VALUE;
     }
 
@@ -379,95 +384,143 @@ public class DungeonMap {
         if (roomsWithRequiredKeys.isEmpty()) {
             logger.warning("This room does not have a key!");
         }
-        
+
         return roomsWithRequiredKeys;
-        
+
     }
-    
+
     public boolean isRoomLocked(int roomFrom, int roomTo) {
-        return(adjacencyMatrix[roomFrom][roomTo] > 0);
+        return (adjacencyMatrix[roomFrom][roomTo] > 0);
+    }
+
+    public ArrayList<Integer> solveDungeon(int startVertex, int endVertex) {
+
+        currentPath = new ArrayList<Integer>();
+
+        // begin with finding the initial best path even given keys
+        ArrayList<Integer> optimalPath = memoizedOptimalPath();
+
+        currentRoom = startVertex;
+        nextTarget.push(endVertex);
+
+        while (!nextTarget.isEmpty()) {
+            recursivelySolve(currentRoom);
+        }
+        
+        logger.info("Path found! Path:\n\n\n" + currentPath);
+        
+        return currentPath;
+    }
+
+    private ArrayList<Integer> recursivelySolve(int startVertex) {
+        
+        
+        int nextRoomTarget = this.nextTarget.pop();
+        int blocker = pathChecker(memoizedOptimalPath(startVertex, nextRoomTarget));
+
+        /*
+         * BASE CASE: Take the direct path if no blockers
+         */
+
+        if (blocker == -1) {
+            this.currentPath.addAll(memoizedOptimalPath(startVertex, nextRoomTarget));
+            
+            if(!nextTarget.isEmpty()) {
+                this.currentPath.remove(this.currentPath.size()-1); // ensure no repeats
+            }
+            
+            this.currentRoom = nextRoomTarget; // since we took this path, we are now here.
+            logger.info("Successfully moved from " + startVertex + " to " + nextRoomTarget);
+            
+            logger.fine("Current path traveled so far: " + currentPath.toString());
+        } else {
+            /*
+             * RECURSE: If there is a blocker, we must first path to the required key
+             * 
+             * we put the last target on the stack and pop it out when we find our path to
+             * the sub target and reevaluate from our new position when updated.
+             */
+
+            nextTarget.push(nextRoomTarget); // push this one back on to revaluate after our subTarget
+            
+            logger.fine("Blocker at " + blocker + " so we must push this original target " + nextRoomTarget + " to be stored, and push our "
+                    + "target keys on to be processed first.\n\nQUEUE: " + nextTarget.toString());
+            
+            ArrayList<Integer> roomsWithKeysNeeded = findRoomsWithKey(blocker);
+            
+            if (!roomsWithKeysNeeded.isEmpty()) {
+                nextTarget.push(roomsWithKeysNeeded.get(0)); // Only push if not empty
+                
+                logger.fine("Blocker's keys are in: " + roomsWithKeysNeeded.toString());
+                
+            }
+            
+            recursivelySolve(startVertex); // we gotta find our path to the room containing the key for this!
+
+            
+            /*
+            logger.fine("We must access the following rooms to unlock our door: " );
+            
+            for (int r = findRoomsWithKey(nextRoomTarget).size() - 1; r >= 0; r--) {
+                nextTarget.push(roomsWithKeysNeeded.get(r));
+                logger.fine("nextTarget list pushed on " + roomsWithKeysNeeded.get(r) + " for list to be " + nextTarget.toString());
+            } // push them in reverse to visit sequentially.
+            */
+
+        }
+
+        return null;
     }
 
     /**
      * 
+     * This function takes in an optimal path that ignores keys, and runs along it
+     * checking with the key constraint to validate whether or note we are actually
+     * able to move along this path
      * 
-     * @param path The path to search through to see if any doors are locked.
-     * @return The rooms which are locked, returned in order.
+     * @param startVertex
+     * @param endVertex
+     * @return Returns -1 if there is no blocker, or the int room blocker.
      */
-    public ArrayList<Integer> findLockedRoomsInPath(ArrayList<Integer> path) {
+    public int pathChecker(ArrayList<Integer> optimalPathIgnoringKeys) {
 
-        ArrayList<Integer> lockedRooms = new ArrayList<Integer>();
-        
-        logger.info("Checking for locked rooms in our current path of " + path.toString());
-      
-        
-        for(int r = 1; r < path.size(); r++) {
-            
-            logger.fine("Checking to see if " + path.get(r) + " is locked");
-            
-            if(isRoomLocked(path.get(r-1), path.get(r))) {
-                logger.fine(path.get(r) + " is locked!");
-                lockedRooms.add(path.get(r));
-            }
-            else {
-                logger.fine(path.get(r) + " is not locked, continuing...");
-            }
-            
-        }
-        
-        if(lockedRooms.isEmpty()) {
-            logger.warning("No locked rooms!");
-        }else {
-            logger.fine("Found locked rooms: " + lockedRooms.toString() + " in path " + path.toString());
-        }
-        
-        return lockedRooms;
-    }
+        logger.info("Validating path " + optimalPathIgnoringKeys.toString() + " is able to be traversed...");
 
-    public ArrayList<Integer> solveDungeon() {
-
-        // begin with finding the initial best path even given keys
-
-        ArrayList<Integer> optimalPath = findOptimalPathUsingBellmanFord();
-        ArrayList<Integer> roomsRequiringKey = findLockedRoomsInPath(optimalPath);
+        ArrayList<Integer> hypotheticalPath = new ArrayList<Integer>();
+        hypotheticalPath.add(optimalPathIgnoringKeys.get(0));
 
         /*
-         * 1. Find each room out of optimal path that requires a key(s) 2. If a room
-         * requires keys (and it is not in the touched list), we will modify the
-         * original optimal path list to implement a path to this key, then from the key
-         * to the door. 2a. When we touch this key, we add this to a list of
-         * "grabbed keys" so we do not grab a key twice. 2b. if a room requires multiple
-         * keys, we will grab them in order, so we will go from: start -> (key1 -> key2
-         * ->) door 2c. Before we finally add this to the total path, we must then check
-         * if this path requires keys, possibly useful to create a doesPathNeedKey
-         * function, or check by cost of path? 3. When we finalize step two, we
-         * implement these paths before the succeeding door. Below shows a workthrough:
-         *
-         * Say we know our optimal path is:
-         * 
-         * 1 -> 3 -> 4
-         * 
-         * Lets say a key to room 3 is in room 2
-         * 
-         * We know at 3 we must find the key which is in room 2, so we can break the
-         * problem down as
-         * 
-         * 
-         * 1 -> (new path to room with key for 3) -> (new path from room to room 3) -> 3
-         * -> 4
-         * 
-         * We should utilize the Floyd-Warshall algorithm
-         * 
-         * 
-         * 
-         * 
-         *
+         * Running along path to see where a blocker is. We add the path thus far to see
+         * if we may have grabbed keys needed along the way.
          */
-        
-        
-       
+        for (int r = 0; r < optimalPathIgnoringKeys.size() - 1; r++) {
+            int currentRoom = optimalPathIgnoringKeys.get(r);
+            int nextRoom = optimalPathIgnoringKeys.get(r + 1);
 
-        return null;
+            if ((adjacencyMatrix[currentRoom][nextRoom] == 0)) {
+                logger.fine("We have a free path from " + currentRoom + " to nextRoom " + nextRoom);
+                hypotheticalPath.add(nextRoom);
+            } else {
+                logger.fine("There is a key required to go from room " + currentRoom + " to room " + nextRoom
+                        + "! Checking if we have the key...");
+                /*
+                 * If the actual path we have traversed contained the key to next room OR If the
+                 * hypothetical path we are exploring currently contained the key to the next
+                 * room
+                 */
+                if (currentPath.containsAll(findRoomsWithKey(nextRoom))
+                        || hypotheticalPath.containsAll(findRoomsWithKey(nextRoom))) {
+
+                    logger.fine("Path is still viable as we have visited a room with the key for it at one point");
+                    hypotheticalPath.add(nextRoom);
+                } else {
+                    logger.info("Blocker found! From room " + currentRoom + " to " + nextRoom);
+                    return nextRoom;
+                }
+            }
+        }
+
+        return -1;
     }
 
     public void runFloydWarshall() {
@@ -580,8 +633,8 @@ public class DungeonMap {
 
         return path;
     }
-    
- // Example method to update distances after collecting a key affecting node `a`
+
+    // Example method to update distances after collecting a key affecting node `a`
     public void updateDistancesForAffectedNodes(Set<Integer> affectedNodes) {
         // Only iterate over affected nodes as intermediate nodes
         for (int k : affectedNodes) {
@@ -600,7 +653,6 @@ public class DungeonMap {
         }
     }
 
-
     public void printFloydWarshallMap() {
         StringBuilder matrixString = new StringBuilder("Floyd-Warshall Matrix:\n");
         // Matrix logging logic (similar to printAdjacencyMatrix)...
@@ -616,6 +668,40 @@ public class DungeonMap {
             matrixString.append("\n");
         }
         logger.info(matrixString.toString());
+    }
+
+    /**
+     * @deprecated
+     * 
+     * @param path The path to search through to see if any doors are locked.
+     * @return The rooms which are locked, returned in order.
+     */
+    public ArrayList<Integer> findLockedRoomsInPath(ArrayList<Integer> path) {
+
+        ArrayList<Integer> lockedRooms = new ArrayList<Integer>();
+
+        logger.info("Checking for locked rooms in our current path of " + path.toString());
+
+        for (int r = 1; r < path.size(); r++) {
+
+            logger.fine("Checking to see if " + path.get(r) + " is locked");
+
+            if (isRoomLocked(path.get(r - 1), path.get(r))) {
+                logger.fine(path.get(r) + " is locked!");
+                lockedRooms.add(path.get(r));
+            } else {
+                logger.fine(path.get(r) + " is not locked, continuing...");
+            }
+
+        }
+
+        if (lockedRooms.isEmpty()) {
+            logger.warning("No locked rooms!");
+        } else {
+            logger.fine("Found locked rooms: " + lockedRooms.toString() + " in path " + path.toString());
+        }
+
+        return lockedRooms;
     }
 
     /**
