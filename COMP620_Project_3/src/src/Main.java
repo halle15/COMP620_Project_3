@@ -1,5 +1,6 @@
 package src;
 
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Main {
@@ -53,17 +54,20 @@ public class Main {
         
         System.out.print("\u001B[36m");
         
-        DungeonMap dM = new DungeonMap("testGraph1.txt", "testKey1.txt");
+        DungeonMap dM = new DungeonMap("testGraph1.txt", "testKey1.txt", Level.INFO);
         
         
         dM.printAdjacencyMatrix();
         
         dM.printKeyLocations();
         
-        Pathfinder f = new Pathfinder(dM);
+        dM.runFloydWarshall();
         
-        logger.info(dM.findOptimalPathUsingBellmanFord().toString());
+        logger.info(dM.findOptimalPathUsingFloydWarshall(dM.startVertex, dM.endVertex).toString());
         
+        dM.printFloydWarshallMap();
+        
+        logger.info(dM.memoizedOptimalPath(1, 12).toString());
         /*
         
         dM = new DungeonMap("shortGraph1.txt", "shortKey1.txt");

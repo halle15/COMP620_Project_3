@@ -14,7 +14,16 @@ public class DungeonMap {
     int startVertex;
     int endVertex;
 
+    /*
+     * Starting point; what is read in from our file initially.
+     */
     public int[][] adjacencyMatrix;
+
+    /*
+     * We implement this as a better "memory" for pathing.
+     */
+    public int[][] floydWarshallMap;
+    public int[][] floydWarshallNext;
 
     /*
      * For int[a][b], describes that there is a key in room a that will reduce the
@@ -24,7 +33,14 @@ public class DungeonMap {
 
     public DungeonMap(String graphFile, String keyFile) {
         logger.info("Building dungeon from graphFile: " + graphFile + " and keyFile: " + keyFile);
-        
+
+        buildDungeon(graphFile, keyFile);
+    }
+    
+    public DungeonMap(String graphFile, String keyFile, Level l) {
+        logger.setLevel(l);
+        logger.info("Building dungeon from graphFile: " + graphFile + " and keyFile: " + keyFile);
+
         buildDungeon(graphFile, keyFile);
     }
 
@@ -74,7 +90,7 @@ public class DungeonMap {
                 int weight = Integer.parseInt(parts[2].trim());
                 adjacencyMatrix[src][dest] = weight; // Add edge with weight
 
-                logger.info("Added edge from " + src + " to " + dest + " with weight " + weight);
+                logger.fine("Added edge from " + src + " to " + dest + " with weight " + weight);
             }
 
         } catch (IOException e) {
@@ -110,7 +126,7 @@ public class DungeonMap {
                     int affectedRoom = Integer.parseInt(parts[i].trim()); // Room affected by the key
 
                     keyLocations[roomWithKey][affectedRoom] = weightReduction;
-                    logger.info("Added key for room " + affectedRoom + " inside of room " + roomWithKey
+                    logger.fine("Added key for room " + affectedRoom + " inside of room " + roomWithKey
                             + " for a weight reduction of " + weightReduction);
                 }
 
@@ -170,7 +186,7 @@ public class DungeonMap {
             }
         }
         if (returnArray.isEmpty()) {
-            logger.info("No key found!");
+            logger.warning("No key found!");
         }
         return returnArray;
     }
@@ -178,7 +194,7 @@ public class DungeonMap {
     public int getKeyWeightReduction(int room) {
         for (int i = 0; i < size; i++) {
             if (keyLocations[room][i] != 0) {
-                logger.info("Key value for key found in room " + room + " is a weight reduction of "
+                logger.fine("Key value for key found in room " + room + " is a weight reduction of "
                         + keyLocations[room][i]);
 
                 return keyLocations[room][i];
@@ -195,12 +211,12 @@ public class DungeonMap {
         ArrayList<Integer> keyRoomTo = isKey(room);
 
         if (!keyRoomTo.isEmpty()) {
-            logger.info("Found key to rooms " + keyRoomTo.toString() + " which was in room " + room
+            logger.finest("Found key to rooms " + keyRoomTo.toString() + " which was in room " + room
                     + ". \n Updating weights...");
 
             for (Integer r : keyRoomTo) {
                 for (int i = 0; i < size; i++) {
-                    logger.info(
+                    logger.finest(
                             "Updating weight from room " + i + " to room " + r + " by " + getKeyWeightReduction(room)
                                     + ",\nNote that some may be at 0 already, so will see no difference.");
 
@@ -221,12 +237,10 @@ public class DungeonMap {
         }
 
     }
-    
+
     public boolean isPath(int from, int to) {
         return (adjacencyMatrix[from][to] != Integer.MAX_VALUE);
     }
-    
-
 
     public void printAdjacencyMatrix() {
         StringBuilder matrixString = new StringBuilder("Adjacency Matrix:\n");
@@ -323,29 +337,226 @@ public class DungeonMap {
             matrixString.append("|\n").append(separator).append("\n");
         }
 
-        logger.info(matrixString.toString()); // Change to logger.info if using a logging framework
+        logger.info(matrixString.toString());
     }
-
 
     // Check if a path exists between src and dest
     public boolean pathExists(int src, int dest) {
         return adjacencyMatrix[src][dest] != Integer.MAX_VALUE;
     }
-    
-    public ArrayList<Integer> solveDungeon(){
+
+    public int findRoomsWithKey(int room) {
+
+        // TODO: IMPLEMENT A RETURN OF ARRAY LISTS THAT HAVE KEYS REQUIRED FOR ROOM
         
+        logger.info("Checking for key in room + " room);
+
+        for (int i = 0; i < size; i++) {
+            if (keyLocations[i][room] > 0) {
+                logger.info("FOUND: The key for room " + room + " is in room " + i);
+                return i;
+            }
+        }
+
+        logger.warning("This room does not have a key!");
+        return -1;
+    }
+
+    /**
+     * 
+     * @param path The path to search through to see if any doors are locked.
+     * @return The rooms which are locked, returned in order.
+     */
+    public ArrayList<Integer> findLockedRoomsInPath(ArrayList<Integer> path) {
+
+        ArrayList<Integer> lockedRooms = new ArrayList<Integer>();
+
+        for (Integer r : path) {
+            // TODO: IMPLEMENT!!!
+            logger.info("Checking to see if " + r + " ");
+        }
+
+        return lockedRooms;
+    }
+
+    public ArrayList<Integer> solveDungeon() {
+
         // begin with finding the initial best path even given keys
-        
+
         ArrayList<Integer> optimalPath = findOptimalPathUsingBellmanFord();
+        ArrayList<Integer> roomsRequiringKey = findLockedRoomsInPath(optimalPath);
+
+        /*
+         * 1. Find each room out of optimal path that requires a key(s) 2. If a room
+         * requires keys (and it is not in the touched list), we will modify the
+         * original optimal path list to implement a path to this key, then from the key
+         * to the door. 2a. When we touch this key, we add this to a list of
+         * "grabbed keys" so we do not grab a key twice. 2b. if a room requires multiple
+         * keys, we will grab them in order, so we will go from: start -> (key1 -> key2
+         * ->) door 2c. Before we finally add this to the total path, we must then check
+         * if this path requires keys, possibly useful to create a doesPathNeedKey
+         * function, or check by cost of path? 3. When we finalize step two, we
+         * implement these paths before the succeeding door. Below shows a workthrough:
+         *
+         * Say we know our optimal path is:
+         * 
+         * 1 -> 3 -> 4
+         * 
+         * Lets say a key to room 3 is in room 2
+         * 
+         * We know at 3 we must find the key which is in room 2, so we can break the
+         * problem down as
+         * 
+         * 
+         * 1 -> (new path to room with key for 3) -> (new path from room to room 3) -> 3
+         * -> 4
+         * 
+         * We should utilize the Floyd-Warshall algorithm
+         * 
+         * 
+         * 
+         * 
+         *
+         */
         
-        // find all doors required in this, if we come across a door, we need to prioritize
         
-        
-        
-        
+
         return null;
     }
     
+    public void runFloydWarshall() {
+
+        int[][] dist = new int[size][size];
+        int[][] next = new int[size][size];
+
+        // Step 1: Initialize dist and next matrices
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < size; j++) {
+                if (i == j) {
+                    dist[i][j] = 0;
+                    next[i][j] = -1;
+                } else if (adjacencyMatrix[i][j] != Integer.MAX_VALUE) {
+                    dist[i][j] = adjacencyMatrix[i][j];
+                    next[i][j] = j;
+                } else {
+                    dist[i][j] = Integer.MAX_VALUE;
+                    next[i][j] = -1;
+                }
+            }
+        }
+        logger.info("Initial distances and next hops set.");
+
+        // Step 2: Run Floyd-Warshall, update dist and next
+        logger.info("Starting Floyd-Warshall algorithm...");
+        for (int k = 0; k < size; k++) {
+            for (int i = 0; i < size; i++) {
+                for (int j = 0; j < size; j++) {
+                    if (dist[i][k] != Integer.MAX_VALUE && dist[k][j] != Integer.MAX_VALUE
+                            && dist[i][k] + dist[k][j] < dist[i][j]) {
+                        dist[i][j] = dist[i][k] + dist[k][j];
+                        next[i][j] = next[i][k];
+                        logger.finest("Updating distance from " + i + " to " + j + " via " + k + " to new distance: "
+                                + dist[i][j]);
+                    }
+                }
+            }
+        }
+        
+        logger.info("Saving our Floyd-Warshall map...");
+        floydWarshallMap = dist;
+        floydWarshallNext = next;
+    }
+    
+    /**
+     * This function utilizes the Floyd-Warshall algorithm to find an optimal path
+     * which is possibly memoized.
+     * 
+     */
+    public ArrayList<Integer> findOptimalPathUsingFloydWarshall() {
+        ArrayList<Integer> path = new ArrayList<Integer>();
+        
+        path = memoizedOptimalPath(startVertex, endVertex);
+
+        return path;
+    }
+
+    /**
+     * This function utilizes the Floyd-Warshall algorithm to find an optimal path
+     * which is possibly memoized.
+     * 
+     * @param currentVertex Vertex we are searching from.
+     * @param targetVertex  Vertex we are attempting to go to.
+     */
+    public ArrayList<Integer> findOptimalPathUsingFloydWarshall(int startVertex, int endVertex) {
+        ArrayList<Integer> path = new ArrayList<Integer>();
+        
+        path = memoizedOptimalPath(startVertex, endVertex);
+
+        return path;
+    }
+    
+    public ArrayList<Integer> memoizedOptimalPath() {
+        ArrayList<Integer> path = new ArrayList<Integer>();
+        
+        logger.info("Reconstructing path from startVertex to endVertex...");
+        int u = startVertex;
+        if (floydWarshallNext[u][endVertex] != -1) { // There is a path
+            while (u != endVertex) {
+                path.add(u);
+                u = floydWarshallNext[u][endVertex];
+            }
+            path.add(endVertex); // Add the end vertex to the path
+            logger.info("Optimal path found: " + path);
+        } else {
+            logger.info("No path exists from " + startVertex + " to " + endVertex);
+            return null;
+        }
+        
+        return path;
+    }
+    
+    public ArrayList<Integer> memoizedOptimalPath(int startVertex, int endVertex) {
+        ArrayList<Integer> path = new ArrayList<Integer>();
+        
+        logger.info("Reconstructing path from startVertex to endVertex...");
+        int u = startVertex;
+        if (floydWarshallNext[u][endVertex] != -1) { // There is a path
+            while (u != endVertex) {
+                path.add(u);
+                u = floydWarshallNext[u][endVertex];
+            }
+            path.add(endVertex); // Add the end vertex to the path
+            logger.info("Optimal path found: " + path);
+        } else {
+            logger.info("No path exists from " + startVertex + " to " + endVertex);
+            return null;
+        }
+        
+        return path;
+    }
+
+    public void printFloydWarshallMap() {
+        StringBuilder matrixString = new StringBuilder("Floyd-Warshall Matrix:\n");
+        // Matrix logging logic (similar to printAdjacencyMatrix)...
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < size; j++) {
+                // Adjust logging to accommodate potentially large numbers (including MAX_VALUE)
+                if (floydWarshallMap[i][j] == Integer.MAX_VALUE) {
+                    matrixString.append(String.format("%7s", "+∞"));
+                } else {
+                    matrixString.append(String.format("%7d", floydWarshallMap[i][j]));
+                }
+            }
+            matrixString.append("\n");
+        }
+        logger.info(matrixString.toString());
+    }
+
+    /**
+     * @deprecated
+     * 
+     * @return The array list with the optimal path in order..
+     */
     public ArrayList<Integer> findOptimalPathUsingBellmanFord() {
         int[] distances = new int[size];
         int[] predecessors = new int[size];
@@ -380,7 +591,8 @@ public class DungeonMap {
         logger.info("Checking for negative-weight cycles...");
         for (int u = 0; u < size; u++) {
             for (int v = 0; v < size; v++) {
-                if (adjacencyMatrix[u][v] != Integer.MAX_VALUE && distances[u] != Integer.MAX_VALUE && distances[u] + adjacencyMatrix[u][v] < distances[v]) {
+                if (adjacencyMatrix[u][v] != Integer.MAX_VALUE && distances[u] != Integer.MAX_VALUE
+                        && distances[u] + adjacencyMatrix[u][v] < distances[v]) {
                     logger.severe("Graph contains a negative-weight cycle. Cannot find an optimal path.");
                     return null; // Negative cycle detected, no solution
                 }
@@ -407,5 +619,23 @@ public class DungeonMap {
         return path;
     }
 
+    /**
+     * @deprecated possibly deprecated as there may be multiple keys for one room :(
+     * 
+     * @param room Room to find the key for.
+     * @return Rooms that contain the key, or -1 if there is no room.
+     */
+    public int findRoomWithKey(int room) {
+    
+        for (int i = 0; i < size; i++) {
+            if (keyLocations[i][room] > 0) {
+                logger.info("FOUND: The key for room " + room + " is in room " + i);
+                return i;
+            }
+        }
+    
+        logger.warning("This room does not have a key!");
+        return -1;
+    }
 
 }
