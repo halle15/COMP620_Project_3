@@ -33,13 +33,30 @@ public class DungeonMap {
     private int[][] keyLocations;
 
     public DungeonMap(String graphFile, String keyFile) {
+        
+        
+        Logger rootLogger = Logger.getLogger("");
+        Handler[] handlers = rootLogger.getHandlers();
+        if (handlers[0] instanceof ConsoleHandler) {
+            handlers[0].setLevel(Level.ALL);
+        }
+
+        
         logger.info("Building dungeon from graphFile: " + graphFile + " and keyFile: " + keyFile);
 
+        
+        
         buildDungeon(graphFile, keyFile);
     }
 
     public DungeonMap(String graphFile, String keyFile, Level l) {
-        logger.setLevel(l);
+        Logger rootLogger = Logger.getLogger("");
+        Handler[] handlers = rootLogger.getHandlers();
+        if (handlers[0] instanceof ConsoleHandler) {
+            handlers[0].setLevel(l);
+        }
+
+
         logger.info("Building dungeon from graphFile: " + graphFile + " and keyFile: " + keyFile);
 
         buildDungeon(graphFile, keyFile);
@@ -364,9 +381,15 @@ public class DungeonMap {
         }
         
         return roomsWithRequiredKeys;
+        
+    }
+    
+    public boolean isRoomLocked(int roomFrom, int roomTo) {
+        return(adjacencyMatrix[roomFrom][roomTo] > 0);
     }
 
     /**
+     * 
      * 
      * @param path The path to search through to see if any doors are locked.
      * @return The rooms which are locked, returned in order.
@@ -374,12 +397,30 @@ public class DungeonMap {
     public ArrayList<Integer> findLockedRoomsInPath(ArrayList<Integer> path) {
 
         ArrayList<Integer> lockedRooms = new ArrayList<Integer>();
-
-        for (Integer r : path) {
-            // TODO: IMPLEMENT!!!
-            logger.info("Checking to see if " + r + " ");
+        
+        logger.info("Checking for locked rooms in our current path of " + path.toString());
+      
+        
+        for(int r = 1; r < path.size(); r++) {
+            
+            logger.fine("Checking to see if " + path.get(r) + " is locked");
+            
+            if(isRoomLocked(path.get(r-1), path.get(r))) {
+                logger.fine(path.get(r) + " is locked!");
+                lockedRooms.add(path.get(r));
+            }
+            else {
+                logger.fine(path.get(r) + " is not locked, continuing...");
+            }
+            
         }
-
+        
+        if(lockedRooms.isEmpty()) {
+            logger.warning("No locked rooms!");
+        }else {
+            logger.fine("Found locked rooms: " + lockedRooms.toString() + " in path " + path.toString());
+        }
+        
         return lockedRooms;
     }
 
