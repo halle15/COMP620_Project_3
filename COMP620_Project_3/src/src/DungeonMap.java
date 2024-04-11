@@ -14,8 +14,8 @@ public class DungeonMap {
     private Logger logger = Logger.getLogger(DungeonMap.class.getName());
 
     int size;
-    int startVertex;
-    int endVertex;
+    public int startVertex;
+    public int endVertex;
 
     /*
      * Starting point; what is read in from our file initially.
@@ -394,11 +394,12 @@ public class DungeonMap {
     }
 
     public ArrayList<Integer> solveDungeon(int startVertex, int endVertex) {
+        
+        runFloydWarshall(); // ensure our map is initialized
 
         currentPath = new ArrayList<Integer>();
 
         // begin with finding the initial best path even given keys
-        ArrayList<Integer> optimalPath = memoizedOptimalPath();
 
         currentRoom = startVertex;
         nextTarget.push(endVertex);
@@ -406,6 +407,7 @@ public class DungeonMap {
         while (!nextTarget.isEmpty()) {
             recursivelySolve(currentRoom);
         }
+        
         
         logger.info("Path found! Path:\n\n\n" + currentPath);
         
@@ -423,16 +425,24 @@ public class DungeonMap {
          */
 
         if (blocker == -1) {
-            this.currentPath.addAll(memoizedOptimalPath(startVertex, nextRoomTarget));
             
-            if(!nextTarget.isEmpty()) {
-                this.currentPath.remove(this.currentPath.size()-1); // ensure no repeats
+            ArrayList<Integer> newOptimalPath = memoizedOptimalPath(startVertex, nextRoomTarget);
+            
+            
+            
+            if(currentPath.size() > 0 && newOptimalPath.get(0) == currentPath.get(currentPath.size()-1)) {
+                newOptimalPath.remove(0);
             }
+            
+            
+            this.currentPath.addAll(newOptimalPath);
+            
             
             this.currentRoom = nextRoomTarget; // since we took this path, we are now here.
             logger.info("Successfully moved from " + startVertex + " to " + nextRoomTarget);
             
             logger.fine("Current path traveled so far: " + currentPath.toString());
+            
         } else {
             /*
              * RECURSE: If there is a blocker, we must first path to the required key
