@@ -23,7 +23,7 @@ class DungeonMapTest {
                 
         dM.printFloydWarshallMap();
                 
-        assertEquals(dM.solveDungeon(dM.startVertex, dM.endVertex).toString(), "[0, 1, 2, 2, 1, 3, 5, 9, 8, 10, 11, 12, 12, 11, 10, 8, 9, 5, 6, 6, 5, 3, 1, 2, 4]");
+        assertEquals(dM.solveDungeon(dM.startVertex, dM.endVertex).toString(), "[0, 1, 2, 1, 3, 5, 9, 8, 10, 11, 12, 11, 10, 8, 9, 5, 6, 5, 3, 1, 2, 4, 7]");
     }
     
     @Test
@@ -40,6 +40,17 @@ class DungeonMapTest {
         dM.printFloydWarshallMap();
                 
         assertEquals(dM.solveDungeon(dM.startVertex, dM.endVertex).toString(), "[0, 2, 1, 2, 3, 2, 4, 5, 6]");
+    }
+    
+    @Test
+    void testShortGraphShortKey1() {
+        DungeonMap dM = new DungeonMap("shortGraph1.txt", "shortKey1.txt");
+        
+        dM.printAdjacencyMatrix();
+        
+        dM.printKeyLocations();
+        
+        assertEquals("[0, 1, 3, 1, 2, 4]", dM.solveDungeon(dM.startVertex, dM.endVertex).toString());
     }
 
 }
