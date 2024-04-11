@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Set;
 import java.util.logging.*;
 
 public class DungeonMap {
@@ -36,7 +37,7 @@ public class DungeonMap {
 
         buildDungeon(graphFile, keyFile);
     }
-    
+
     public DungeonMap(String graphFile, String keyFile, Level l) {
         logger.setLevel(l);
         logger.info("Building dungeon from graphFile: " + graphFile + " and keyFile: " + keyFile);
@@ -345,21 +346,24 @@ public class DungeonMap {
         return adjacencyMatrix[src][dest] != Integer.MAX_VALUE;
     }
 
-    public int findRoomsWithKey(int room) {
+    public ArrayList<Integer> findRoomsWithKey(int room) {
 
-        // TODO: IMPLEMENT A RETURN OF ARRAY LISTS THAT HAVE KEYS REQUIRED FOR ROOM
-        
-        logger.info("Checking for key in room + " room);
+        ArrayList<Integer> roomsWithRequiredKeys = new ArrayList<Integer>();
+
+        logger.info("Checking for keys for room " + room);
 
         for (int i = 0; i < size; i++) {
             if (keyLocations[i][room] > 0) {
-                logger.info("FOUND: The key for room " + room + " is in room " + i);
-                return i;
+                logger.info("FOUND: A key for room " + room + " is in room " + i);
+                roomsWithRequiredKeys.add(i);
             }
         }
 
-        logger.warning("This room does not have a key!");
-        return -1;
+        if (roomsWithRequiredKeys.isEmpty()) {
+            logger.warning("This room does not have a key!");
+        }
+        
+        return roomsWithRequiredKeys;
     }
 
     /**
@@ -420,10 +424,22 @@ public class DungeonMap {
          */
         
         
+        
+        
+        /*
+         * FUCK ALL THE ABOVE
+         * 
+         * FLOYD-WARSHSALL FOR THE MAP
+         * 
+         * GET THE OOPTIMAL MAP
+         * 
+         * CHECK WHERE WE NEED KEYS
+         * 
+         */
 
         return null;
     }
-    
+
     public void runFloydWarshall() {
 
         int[][] dist = new int[size][size];
@@ -461,12 +477,12 @@ public class DungeonMap {
                 }
             }
         }
-        
+
         logger.info("Saving our Floyd-Warshall map...");
         floydWarshallMap = dist;
         floydWarshallNext = next;
     }
-    
+
     /**
      * This function utilizes the Floyd-Warshall algorithm to find an optimal path
      * which is possibly memoized.
@@ -474,7 +490,7 @@ public class DungeonMap {
      */
     public ArrayList<Integer> findOptimalPathUsingFloydWarshall() {
         ArrayList<Integer> path = new ArrayList<Integer>();
-        
+
         path = memoizedOptimalPath(startVertex, endVertex);
 
         return path;
@@ -489,15 +505,15 @@ public class DungeonMap {
      */
     public ArrayList<Integer> findOptimalPathUsingFloydWarshall(int startVertex, int endVertex) {
         ArrayList<Integer> path = new ArrayList<Integer>();
-        
+
         path = memoizedOptimalPath(startVertex, endVertex);
 
         return path;
     }
-    
+
     public ArrayList<Integer> memoizedOptimalPath() {
         ArrayList<Integer> path = new ArrayList<Integer>();
-        
+
         logger.info("Reconstructing path from startVertex to endVertex...");
         int u = startVertex;
         if (floydWarshallNext[u][endVertex] != -1) { // There is a path
@@ -511,29 +527,49 @@ public class DungeonMap {
             logger.info("No path exists from " + startVertex + " to " + endVertex);
             return null;
         }
-        
+
+        return path;
+    }
+
+    public ArrayList<Integer> memoizedOptimalPath(int startVertex, int endVertex) {
+        ArrayList<Integer> path = new ArrayList<Integer>();
+
+        logger.info("Reconstructing path from startVertex to endVertex...");
+        int u = startVertex;
+        if (floydWarshallNext[u][endVertex] != -1) { // There is a path
+            while (u != endVertex) {
+                path.add(u);
+                u = floydWarshallNext[u][endVertex];
+            }
+            path.add(endVertex); // Add the end vertex to the path
+            logger.info("Optimal path found: " + path);
+        } else {
+            logger.info("No path exists from " + startVertex + " to " + endVertex);
+            return null;
+        }
+
         return path;
     }
     
-    public ArrayList<Integer> memoizedOptimalPath(int startVertex, int endVertex) {
-        ArrayList<Integer> path = new ArrayList<Integer>();
-        
-        logger.info("Reconstructing path from startVertex to endVertex...");
-        int u = startVertex;
-        if (floydWarshallNext[u][endVertex] != -1) { // There is a path
-            while (u != endVertex) {
-                path.add(u);
-                u = floydWarshallNext[u][endVertex];
+ // Example method to update distances after collecting a key affecting node `a`
+    public void updateDistancesForAffectedNodes(Set<Integer> affectedNodes) {
+        // Only iterate over affected nodes as intermediate nodes
+        for (int k : affectedNodes) {
+            for (int i = 0; i < size; i++) {
+                for (int j = 0; j < size; j++) {
+                    // Check if the current path i->j can be improved by going through k
+                    if (floydWarshallMap[i][k] != Integer.MAX_VALUE && floydWarshallMap[k][j] != Integer.MAX_VALUE) {
+                        if (floydWarshallMap[i][j] > floydWarshallMap[i][k] + floydWarshallMap[k][j]) {
+                            floydWarshallMap[i][j] = floydWarshallMap[i][k] + floydWarshallMap[k][j];
+                            floydWarshallNext[i][j] = floydWarshallNext[i][k];
+                            // Optionally, update affectedNodes if this change affects other nodes
+                        }
+                    }
+                }
             }
-            path.add(endVertex); // Add the end vertex to the path
-            logger.info("Optimal path found: " + path);
-        } else {
-            logger.info("No path exists from " + startVertex + " to " + endVertex);
-            return null;
         }
-        
-        return path;
     }
+
 
     public void printFloydWarshallMap() {
         StringBuilder matrixString = new StringBuilder("Floyd-Warshall Matrix:\n");
@@ -626,14 +662,14 @@ public class DungeonMap {
      * @return Rooms that contain the key, or -1 if there is no room.
      */
     public int findRoomWithKey(int room) {
-    
+
         for (int i = 0; i < size; i++) {
             if (keyLocations[i][room] > 0) {
                 logger.info("FOUND: The key for room " + room + " is in room " + i);
                 return i;
             }
         }
-    
+
         logger.warning("This room does not have a key!");
         return -1;
     }

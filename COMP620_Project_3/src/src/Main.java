@@ -68,13 +68,17 @@ public class Main {
         dM.printFloydWarshallMap();
         
         logger.info(dM.memoizedOptimalPath(1, 12).toString());
-        /*
+        
         
         dM = new DungeonMap("shortGraph1.txt", "shortKey1.txt");
         
         dM.printAdjacencyMatrix();
         
         dM.printKeyLocations();
+       
+        logger.info("Checking where key is for room 2");
+        
+        logger.info(dM.findRoomsWithKey(2).toString());
         
         dM.grabKey(3);
         
@@ -82,7 +86,7 @@ public class Main {
         
         dM.printKeyLocations();
         
-        */
+        
         
         /* testing double take
         dM.grabKey(3);
