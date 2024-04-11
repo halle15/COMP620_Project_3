@@ -1,12 +1,12 @@
 package src;
 
+import java.util.logging.ConsoleHandler;
+import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Main {
-    
-    private static Logger logger = Logger.getLogger(Main.class.getName());
-    
+        
     /* key reduces the weight of all edges going to a node by a cost.
     // graph.txt is 4 lines, first is n of vertices (from 0 to n-1)
     // second is start node
@@ -50,11 +50,16 @@ public class Main {
      */
     
     public static void main(String[] args) {
-        
+        Logger rootLogger = Logger.getLogger("");
+        rootLogger.setLevel(Level.FINE);
+        Handler[] handlers = rootLogger.getHandlers();
+        if (handlers[0] instanceof ConsoleHandler) {
+            handlers[0].setLevel(Level.FINE);
+        }
         
         System.out.print("\u001B[36m");
         
-        DungeonMap dM = new DungeonMap("testGraph1.txt", "testKey1.txt", Level.INFO);
+        DungeonMap dM = new DungeonMap("testGraph1.txt", "testKey1.txt", Level.ALL);
         
         
         dM.printAdjacencyMatrix();
@@ -63,18 +68,27 @@ public class Main {
         
         dM.runFloydWarshall();
         
-        logger.info(dM.findOptimalPathUsingFloydWarshall(dM.startVertex, dM.endVertex).toString());
+        rootLogger.info(dM.findOptimalPathUsingFloydWarshall(dM.startVertex, dM.endVertex).toString());
         
         dM.printFloydWarshallMap();
         
-        logger.info(dM.memoizedOptimalPath(1, 12).toString());
-        /*
+        rootLogger.info(dM.memoizedOptimalPath(1, 12).toString());
+        
         
         dM = new DungeonMap("shortGraph1.txt", "shortKey1.txt");
         
         dM.printAdjacencyMatrix();
         
         dM.printKeyLocations();
+       
+        rootLogger.info("Checking where key is for room 2");
+        
+        rootLogger.info(dM.findRoomsWithKey(2).toString());
+        
+        dM.runFloydWarshall();
+        
+        rootLogger.info(dM.findLockedRoomsInPath(dM.findOptimalPathUsingFloydWarshall()).toString());
+                
         
         dM.grabKey(3);
         
@@ -82,7 +96,7 @@ public class Main {
         
         dM.printKeyLocations();
         
-        */
+        
         
         /* testing double take
         dM.grabKey(3);
@@ -90,11 +104,11 @@ public class Main {
         
         
         /* testing removing key
-        logger.info(dM.isKey(3).toString());
+        rootLogger.info(dM.isKey(3).toString());
         
         dM.removeRoomKey(3);
         
-        logger.info(dM.isKey(3).toString());
+        rootLogger.info(dM.isKey(3).toString());
         */
         
     }
