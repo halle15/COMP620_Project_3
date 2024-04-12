@@ -43,6 +43,22 @@ class DungeonMapTest {
     }
     
     @Test
+    void testGraphKey3() {
+        DungeonMap dM = new DungeonMap("testGraph3.txt", "testKey3.txt", Level.ALL);
+
+        
+        dM.printAdjacencyMatrix();
+        
+        dM.printKeyLocations();
+        
+        dM.runFloydWarshall();
+                
+        dM.printFloydWarshallMap();
+                
+        assertEquals(dM.solveDungeon(dM.startVertex, dM.endVertex).toString(), "[0, 1, 6, 1, 2, 3, 2, 1, 4, 5]");
+    }
+    
+    @Test
     void testShortGraphShortKey1() {
         DungeonMap dM = new DungeonMap("shortGraph1.txt", "shortKey1.txt");
         
