@@ -176,91 +176,6 @@ public class DungeonMap {
         return adjacencyMatrix[src][dest];
     }
 
-    /**
-     * Removes all weight reductions from this room's key NO MATTER WHAT. Utilize
-     * this AFTER changing weights!
-     * 
-     * @param room The room to remove weight reductions from.
-     */
-    public void removeRoomKey(int room) {
-        for (int i = 0; i < size; i++) {
-            keyLocations[room][i] = 0;
-        }
-
-        logger.info("Removed key from room " + room + "!");
-    }
-
-    /**
-     * 
-     * @param room The room to search in
-     * @return Returns list of rooms this room's key unlocks, or an empty list if
-     *         there is no key
-     */
-    public ArrayList<Integer> isKey(int room) {
-
-        logger.info("Checking for key in room " + room + "...");
-
-        ArrayList<Integer> returnArray = new ArrayList<Integer>();
-
-        for (int i = 0; i < size; i++) {
-            if (keyLocations[room][i] != 0) {
-                logger.info("Found key for room " + i);
-                returnArray.add(i);
-            }
-        }
-        if (returnArray.isEmpty()) {
-            logger.warning("No key found!");
-        }
-        return returnArray;
-    }
-
-    public int getKeyWeightReduction(int room) {
-        for (int i = 0; i < size; i++) {
-            if (keyLocations[room][i] != 0) {
-                logger.fine("Key value for key found in room " + room + " is a weight reduction of "
-                        + keyLocations[room][i]);
-
-                return keyLocations[room][i];
-            }
-        }
-
-        return -1;
-    }
-
-    // Update the cost of all paths going to a specific room based on a key pickup
-    public void grabKey(int room) {
-        logger.info("Trying to take key in room " + room);
-
-        ArrayList<Integer> keyRoomTo = isKey(room);
-
-        if (!keyRoomTo.isEmpty()) {
-            logger.finest("Found key to rooms " + keyRoomTo.toString() + " which was in room " + room
-                    + ". \n Updating weights...");
-
-            for (Integer r : keyRoomTo) {
-                for (int i = 0; i < size; i++) {
-                    logger.finest(
-                            "Updating weight from room " + i + " to room " + r + " by " + getKeyWeightReduction(room)
-                                    + ",\nNote that some may be at 0 already, so will see no difference.");
-
-                    if (adjacencyMatrix[i][r] < Integer.MAX_VALUE) {
-                        adjacencyMatrix[i][r] = Math.max(0, adjacencyMatrix[i][r] - getKeyWeightReduction(room));
-                    }
-                }
-                // Math.min(0, adjacencyMatrix[i][r] - getKeyWeightReduction(room)
-
-            }
-
-            logger.info("Updated weights, now removing key...");
-
-            removeRoomKey(room);
-
-        } else {
-            logger.warning("Tried to take key when one is not available! Possibly broken logic!");
-        }
-
-    }
-
     public boolean isPath(int from, int to) {
         return (adjacencyMatrix[from][to] != Integer.MAX_VALUE);
     }
@@ -348,8 +263,8 @@ public class DungeonMap {
 
             for (int j = 0; j < size; j++) {
                 matrixString.append("| ");
-                if (keyLocations[i][j] == 0) { // Adjust this condition if the meaning of 0 changes
-                    matrixString.append("-".repeat(maxDigits)); // Use "-" to indicate no key effect
+                if (keyLocations[i][j] == 0) { 
+                    matrixString.append("-".repeat(maxDigits)); 
                 } else {
                     // Right-pad the number with spaces to align columns
                     String numberStr = String.format("%-" + maxDigits + "d", keyLocations[i][j]);
@@ -367,7 +282,13 @@ public class DungeonMap {
     public boolean directEdgeExists(int src, int dest) {
         return adjacencyMatrix[src][dest] != Integer.MAX_VALUE;
     }
-
+    
+    /**
+     * 
+     * 
+     * @param room
+     * @return
+     */
     public ArrayList<Integer> findRoomsWithKey(int room) {
 
         ArrayList<Integer> roomsWithRequiredKeys = new ArrayList<Integer>();
@@ -465,7 +386,7 @@ public class DungeonMap {
                 
             }
             
-            recursivelySolve(startVertex); // we gotta find our path to the room containing the key for this!
+            recursivelySolve(startVertex); // we must find our path to the room containing the key for this!
 
             
             /*
@@ -644,28 +565,8 @@ public class DungeonMap {
         return path;
     }
 
-    // Example method to update distances after collecting a key affecting node `a`
-    public void updateDistancesForAffectedNodes(Set<Integer> affectedNodes) {
-        // Only iterate over affected nodes as intermediate nodes
-        for (int k : affectedNodes) {
-            for (int i = 0; i < size; i++) {
-                for (int j = 0; j < size; j++) {
-                    // Check if the current path i->j can be improved by going through k
-                    if (floydWarshallMap[i][k] != Integer.MAX_VALUE && floydWarshallMap[k][j] != Integer.MAX_VALUE) {
-                        if (floydWarshallMap[i][j] > floydWarshallMap[i][k] + floydWarshallMap[k][j]) {
-                            floydWarshallMap[i][j] = floydWarshallMap[i][k] + floydWarshallMap[k][j];
-                            floydWarshallNext[i][j] = floydWarshallNext[i][k];
-                            // Optionally, update affectedNodes if this change affects other nodes
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     public void printFloydWarshallMap() {
         StringBuilder matrixString = new StringBuilder("Floyd-Warshall Matrix:\n");
-        // Matrix logging logic (similar to printAdjacencyMatrix)...
         for (int i = 0; i < size; i++) {
             for (int j = 0; j < size; j++) {
                 // Adjust logging to accommodate potentially large numbers (including MAX_VALUE)
@@ -678,6 +579,121 @@ public class DungeonMap {
             matrixString.append("\n");
         }
         logger.info(matrixString.toString());
+    }
+
+    /**
+     * Removes all weight reductions from this room's key NO MATTER WHAT. Utilize
+     * this AFTER changing weights!
+     * 
+     * @deprecated old approach
+     * @param room The room to remove weight reductions from.
+     */
+    public void removeRoomKey(int room) {
+        for (int i = 0; i < size; i++) {
+            keyLocations[room][i] = 0;
+        }
+    
+        logger.info("Removed key from room " + room + "!");
+    }
+
+    /**
+     * @deprecated old approach
+     * @param room The room to search in
+     * @return Returns list of rooms this room's key unlocks, or an empty list if
+     *         there is no key
+     */
+    public ArrayList<Integer> isKey(int room) {
+    
+        logger.info("Checking for key in room " + room + "...");
+    
+        ArrayList<Integer> returnArray = new ArrayList<Integer>();
+    
+        for (int i = 0; i < size; i++) {
+            if (keyLocations[room][i] != 0) {
+                logger.info("Found key for room " + i);
+                returnArray.add(i);
+            }
+        }
+        if (returnArray.isEmpty()) {
+            logger.warning("No key found!");
+        }
+        return returnArray;
+    }
+
+    /**
+     * @deprecated old approach, probably the right way :/
+     * @param room
+     * @return
+     */
+    public int getKeyWeightReduction(int room) {
+        for (int i = 0; i < size; i++) {
+            if (keyLocations[room][i] != 0) {
+                logger.fine("Key value for key found in room " + room + " is a weight reduction of "
+                        + keyLocations[room][i]);
+    
+                return keyLocations[room][i];
+            }
+        }
+    
+        return -1;
+    }
+
+    /**
+     * @deprecated old approach
+     * @param room
+     */
+    public void grabKey(int room) {
+        logger.info("Trying to take key in room " + room);
+    
+        ArrayList<Integer> keyRoomTo = isKey(room);
+    
+        if (!keyRoomTo.isEmpty()) {
+            logger.finest("Found key to rooms " + keyRoomTo.toString() + " which was in room " + room
+                    + ". \n Updating weights...");
+    
+            for (Integer r : keyRoomTo) {
+                for (int i = 0; i < size; i++) {
+                    logger.finest(
+                            "Updating weight from room " + i + " to room " + r + " by " + getKeyWeightReduction(room)
+                                    + ",\nNote that some may be at 0 already, so will see no difference.");
+    
+                    if (adjacencyMatrix[i][r] < Integer.MAX_VALUE) {
+                        adjacencyMatrix[i][r] = Math.max(0, adjacencyMatrix[i][r] - getKeyWeightReduction(room));
+                    }
+                }
+                // Math.min(0, adjacencyMatrix[i][r] - getKeyWeightReduction(room)
+    
+            }
+    
+            logger.info("Updated weights, now removing key...");
+    
+            removeRoomKey(room);
+    
+        } else {
+            logger.warning("Tried to take key when one is not available! Possibly broken logic!");
+        }
+    
+    }
+
+    /**
+     * @deprecated
+     * 
+     */
+    public void updateDistancesForAffectedNodes(Set<Integer> affectedNodes) {
+        // Only iterate over affected nodes as intermediate nodes
+        for (int k : affectedNodes) {
+            for (int i = 0; i < size; i++) {
+                for (int j = 0; j < size; j++) {
+                    // Check if the current path i->j can be improved by going through k
+                    if (floydWarshallMap[i][k] != Integer.MAX_VALUE && floydWarshallMap[k][j] != Integer.MAX_VALUE) {
+                        if (floydWarshallMap[i][j] > floydWarshallMap[i][k] + floydWarshallMap[k][j]) {
+                            floydWarshallMap[i][j] = floydWarshallMap[i][k] + floydWarshallMap[k][j];
+                            floydWarshallNext[i][j] = floydWarshallNext[i][k];
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /**
